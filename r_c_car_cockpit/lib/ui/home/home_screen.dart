@@ -1,7 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:peerdart/peerdart.dart';
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class CockpitScreen extends StatefulWidget {
+  const CockpitScreen({super.key});
+
+  @override
+  State<CockpitScreen> createState() => _CockpitScreenState();
+}
+
+class _CockpitScreenState extends State<CockpitScreen> {
+  var _isConnected = false;
+
+  final _peer = Peer(
+    id: 'cockpit',
+    options: PeerOptions(
+      debug: LogLevel.All,
+    ),
+  );
+  final _remoteRenderer = RTCVideoRenderer();
+
+  @override
+  void initState() {
+    super.initState();
+    _remoteRenderer.initialize();
+
+    _peer.on<MediaConnection>('call').listen((call) async {
+      final mediaStream = await navigator.mediaDevices
+          .getUserMedia({'video': true, 'audio': false});
+
+      call.answer(mediaStream);
+
+      call.on('close').listen((event) {
+        setState(() {
+          _isConnected = false;
+        });
+      });
+
+      call.on<MediaStream>('stream').listen((event) {
+        _remoteRenderer.srcObject = event;
+
+        setState(() {
+          _isConnected = true;
+        });
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _peer.dispose();
+    _remoteRenderer.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,9 +69,19 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           child: Stack(
+            alignment: Alignment.center,
             children: [
+              if (_isConnected)
+                RotatedBox(
+                  quarterTurns: 1,
+                  child: RTCVideoView(
+                    _remoteRenderer,
+                    mirror: true,
+                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                  ),
+                ),
               Positioned(
-                bottom: 8.0,
+                top: size.height - 88.0,
                 right: (size.width / 2) - 90.0,
                 child: Container(
                   height: 80.0,
@@ -40,7 +101,7 @@ class HomeScreen extends StatelessWidget {
                         SizedBox(
                           width: 58.0,
                           child: Text(
-                            '40',
+                            '00',
                             style: TextStyle(
                               fontSize: 24.0,
                               color: Colors.white,
