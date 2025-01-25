@@ -32,17 +32,12 @@ class _CockpitScreenState extends State<CockpitScreen> {
       call.answer(mediaStream);
 
       call.on('close').listen((event) {
-        setState(() {
-          _isConnected = false;
-        });
+        setState(() => _isConnected = false);
       });
 
       call.on<MediaStream>('stream').listen((event) {
         _remoteRenderer.srcObject = event;
-
-        setState(() {
-          _isConnected = true;
-        });
+        setState(() => _isConnected = true);
       });
     });
   }

@@ -10,52 +10,38 @@ class ServerScreen extends StatefulWidget {
 }
 
 class _ServerScreenState extends State<ServerScreen> {
-  final Peer peer = Peer(
+  final _peer = Peer(
     id: 'server',
     options: PeerOptions(debug: LogLevel.All),
   );
-  final _localRenderer = RTCVideoRenderer();
   final _remoteRenderer = RTCVideoRenderer();
-  bool inCall = false;
-  String? peerId;
+  bool _isConnected = false;
+
+  MediaConnection? _conn;
 
   @override
   void initState() {
     super.initState();
 
-    peer.on('open').listen((id) {
-      setState(() {
-        peerId = peer.id;
-      });
+    _peer.on('open').listen((id) {
+      setState(() {});
     });
 
-    peer.on<MediaConnection>('call').listen((call) async {
+    _peer.on<MediaConnection>('call').listen((call) async {
       final mediaStream = await navigator.mediaDevices
           .getUserMedia({'video': true, 'audio': false});
 
       call.answer(mediaStream);
 
       call.on('close').listen((event) {
-        setState(() {
-          inCall = false;
-        });
-      });
-
-      call.on<MediaStream>('stream').listen((event) {
-        _localRenderer.srcObject = mediaStream;
-        _remoteRenderer.srcObject = event;
-
-        setState(() {
-          inCall = true;
-        });
+        setState(() => _isConnected = false);
       });
     });
   }
 
   @override
   void dispose() {
-    peer.dispose();
-    _localRenderer.dispose();
+    _peer.dispose();
     _remoteRenderer.dispose();
     super.dispose();
   }
@@ -64,22 +50,26 @@ class _ServerScreenState extends State<ServerScreen> {
     final mediaStream = await navigator.mediaDevices
         .getUserMedia({'video': true, 'audio': false});
 
-    final conn = peer.call('cockpit', mediaStream);
+    _conn = _peer.call('cockpit', mediaStream);
 
-    conn.on('close').listen((event) {
-      setState(() {
-        inCall = false;
-      });
+    _conn?.on('close').listen((event) {
+      setState(() => _isConnected = false);
     });
 
-    conn.on<MediaStream>('stream').listen((event) {
+    _conn?.on<MediaStream>('stream').listen((event) {
       _remoteRenderer.srcObject = event;
-      _localRenderer.srcObject = mediaStream;
 
-      setState(() {
-        inCall = true;
-      });
+      setState(() => _isConnected = true);
     });
+  }
+
+  void disconnect() async {
+    _remoteRenderer.srcObject = null;
+    _conn?.close();
+    _conn = null;
+    _peer.disconnect();
+    setState(() => _isConnected = false);
+    print('Disconnected');
   }
 
   void send() {
@@ -94,18 +84,20 @@ class _ServerScreenState extends State<ServerScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               _renderState(),
-              SelectableText(peerId ?? ''),
+              SelectableText(_peer.id ?? ''),
               SizedBox(height: 200),
               ElevatedButton(onPressed: connect, child: const Text('connect')),
+              ElevatedButton(
+                  onPressed: disconnect, child: const Text('disconnect')),
             ],
           ),
         ));
   }
 
   Widget _renderState() {
-    Color bgColor = inCall ? Colors.green : Colors.grey;
+    Color bgColor = _isConnected ? Colors.green : Colors.grey;
     Color txtColor = Colors.white;
-    String txt = inCall ? 'Connected' : 'Standby';
+    String txt = _isConnected ? 'Connected' : 'Standby';
     return Container(
       decoration: BoxDecoration(color: bgColor),
       child: Text(

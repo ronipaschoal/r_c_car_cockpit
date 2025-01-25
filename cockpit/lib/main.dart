@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:r_c_car_cockpit/ui/home/home_screen.dart';
+import 'package:r_c_car_cockpit/ui/cockpit/cockpit_screen.dart';
 
 void main() {
   runApp(const App());
