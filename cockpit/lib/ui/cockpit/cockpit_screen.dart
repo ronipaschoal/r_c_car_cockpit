@@ -32,6 +32,7 @@ class _CockpitScreenState extends State<CockpitScreen> {
       call.answer(mediaStream);
 
       call.on('close').listen((event) {
+        _remoteRenderer.srcObject = null;
         setState(() => _isConnected = false);
       });
 
@@ -67,13 +68,10 @@ class _CockpitScreenState extends State<CockpitScreen> {
             alignment: Alignment.center,
             children: [
               if (_isConnected)
-                RotatedBox(
-                  quarterTurns: 1,
-                  child: RTCVideoView(
-                    _remoteRenderer,
-                    mirror: true,
-                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                  ),
+                RTCVideoView(
+                  _remoteRenderer,
+                  mirror: true,
+                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                 ),
               Positioned(
                 top: size.height - 88.0,
